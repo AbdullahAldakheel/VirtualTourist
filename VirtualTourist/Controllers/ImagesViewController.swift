@@ -11,12 +11,12 @@ import MapKit
 import CoreData
 
 class ImagesViewController: UIViewController, MKMapViewDelegate{
-
+    
     @IBOutlet weak var mapView: MKMapView!
     @IBOutlet weak var collectionView: UICollectionView!
     @IBOutlet weak var button: UIButton!
     @IBOutlet weak var label: UILabel!
-  
+    
     var dataController: DataController {
         return DataController.shared
     }
@@ -29,7 +29,7 @@ class ImagesViewController: UIViewController, MKMapViewDelegate{
     var presentingAlert = false
     var pin: Pins?
     var fetchedResultsController: NSFetchedResultsController<Photo>!
-
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         mapView.delegate = self
@@ -52,7 +52,7 @@ class ImagesViewController: UIViewController, MKMapViewDelegate{
         annotation.coordinate = CLLocationCoordinate2D(latitude: pin.lat, longitude: pin.long)
         self.mapView.addAnnotation(annotation)
     }
-
+    
     @IBAction func deleteAction(_ sender: Any) {
         for photos in fetchedResultsController.fetchedObjects! {
             dataController.viewContext.delete(photos)
@@ -65,9 +65,9 @@ class ImagesViewController: UIViewController, MKMapViewDelegate{
         let fr: NSFetchRequest<Photo> = Photo.fetchRequest()
         fr.sortDescriptors = []
         fr.predicate = NSPredicate(format: "pin == %@", argumentArray: [pin])
-                fetchedResultsController = NSFetchedResultsController(fetchRequest: fr, managedObjectContext: dataController.viewContext, sectionNameKeyPath: nil, cacheName: nil)
+        fetchedResultsController = NSFetchedResultsController(fetchRequest: fr, managedObjectContext: dataController.viewContext, sectionNameKeyPath: nil, cacheName: nil)
         fetchedResultsController.delegate = self
-                var error: NSError?
+        var error: NSError?
         do {
             try fetchedResultsController.performFetch()
         } catch let error1 as NSError {
@@ -84,16 +84,16 @@ class ImagesViewController: UIViewController, MKMapViewDelegate{
         let lon = pin.long
         
         Connect.shared().searchBy(latitude: lat, longitude: lon, totalPages: totalPages) { (photosParsed, error) in
-
-
+            
+            
             if let photosParsed = photosParsed {
                 self.totalPages = photosParsed.photos.pages
                 let totalPhotos = photosParsed.photos.photo.count
                 self.storePhotos(photosParsed.photos.photo, forPin: pin)
                 if totalPhotos == 0 {
                     self.updateStatusLabel("No Photo")
-  
-
+                    
+                    
                 }
             } else if let error = error {
                 self.updateStatusLabel("Error")
@@ -102,24 +102,24 @@ class ImagesViewController: UIViewController, MKMapViewDelegate{
     }
     
     private func updateStatusLabel(_ text: String) {
-            self.label.text = text
-        }
+        self.label.text = text
+    }
     
     
     private func storePhotos(_ photos: [PhotoParser], forPin: Pins) {
         for photo in photos {
             
-                if let url = photo.url {
-
-                    let managedObject = Photo(context: DataController.shared.viewContext)
-                    managedObject.photo = url
-                    managedObject.pin = forPin
-                    try? DataController.shared.viewContext.save()
-                   // images.flickrPhotos.append(url)
-                    DispatchQueue.main.async {
-                        self.collectionView.reloadData()
-                    }
+            if let url = photo.url {
+                
+                let managedObject = Photo(context: DataController.shared.viewContext)
+                managedObject.photo = url
+                managedObject.pin = forPin
+                try? DataController.shared.viewContext.save()
+                // images.flickrPhotos.append(url)
+                DispatchQueue.main.async {
+                    self.collectionView.reloadData()
                 }
+            }
             
         }
     }
@@ -150,7 +150,7 @@ extension ImagesViewController: UICollectionViewDelegateFlowLayout {
         let width = (collectionView.frame.size.width - 1) / 3
         return CGSize(width: width, height: width)
     }
-
+    
     
 }
 
@@ -251,7 +251,7 @@ extension ImagesViewController: UICollectionViewDataSource, UICollectionViewDele
             Connect.shared().cancelDownload(imageUrl)
         }
     }
-
+    
     private func configImage(using cell: PhotoViewCell, photo: Photo, collectionView: UICollectionView, index: IndexPath) {
         if let imageData = photo.imagedata {
             cell.activityIndicator.stopAnimating()
@@ -264,13 +264,17 @@ extension ImagesViewController: UICollectionViewDataSource, UICollectionViewDele
                         return
                     } else if let data = data {
                         
-                        
-                        if let currentCell = collectionView.cellForItem(at: index) as? PhotoViewCell {
-                            if currentCell.imageUrl == imageUrl {
-                                currentCell.imageView.image = UIImage(data: data)
-                                cell.activityIndicator.stopAnimating()
+                        DispatchQueue.main.async{
+                            
+                            if let currentCell = collectionView.cellForItem(at: index) as? PhotoViewCell {
+                                if currentCell.imageUrl == imageUrl {
+                                    currentCell.imageView.image = UIImage(data: data)
+                                    cell.activityIndicator.stopAnimating()
+                                }
                             }
                         }
+                        
+                        
                         photo.imagedata = data
                         DispatchQueue.global(qos: .background).async {
                             try? self.dataController.viewContext.save()
